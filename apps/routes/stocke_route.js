@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const stockeController = require('../controllers/stocke_controller');
+const achat_ontroller = require('../controllers/achat_controller')
 const authenticate = require('../../config/middleware/authenticate')
 
 // Routes pour les employés
@@ -10,5 +11,9 @@ router.get('/stockes/search/:nom_stocke',authenticate, stockeController.getAllSt
 router.get('/stockes/:id_stocke',authenticate, stockeController.getOneStocke);
 router.put('/stockes/:id_stocke',authenticate, stockeController.updateStocke);
 router.delete('/stockes/:id_stocke',authenticate, stockeController.deleteStocke);
+router.post('/achats', authenticate, achat_ontroller.addAchat);
+router.get('/achats/employe', authenticate, achat_ontroller.getAchatsByEmploye);
+router.get('/achats', authenticate, achat_ontroller.getAllAchats);
+
 
 module.exports = router;

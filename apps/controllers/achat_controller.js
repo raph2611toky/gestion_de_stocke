@@ -59,7 +59,49 @@ const getAchatsByEmploye = async (req, res) => {
     }
 };
 
+const getAllAchats = async (req, res) => {
+    try {
+        //GET /api/achats?dateDebut=2024-01-01&dateFin=2024-06-30
+        const { dateDebut, dateFin } = req.query;
+
+        let whereClause = {};
+        if (dateDebut && dateFin) {
+            whereClause = {
+                date_achat: {
+                    [Op.between]: [dateDebut, dateFin],
+                },
+            };
+        } else if (dateDebut) {
+            whereClause = {
+                date_achat: {
+                    [Op.gte]: dateDebut,
+                },
+            };
+        } else if (dateFin) {
+            whereClause = {
+                date_achat: {
+                    [Op.lte]: dateFin,
+                },
+            };
+        }
+
+        const achats = await StockeAchat.findAll({
+            where: whereClause,
+            include: [{ model: Stocke, as: 'stocke' }],
+            order: [['date_achat', 'DESC']],
+        });
+
+        return Helper.send_res(res, achats);
+    } catch (err) {
+        console.error(err);
+        const message = `Impossible de récupérer la liste des achats de stocke ! Réessayez dans quelques instants.`;
+        return Helper.send_res(res, { erreur: message }, 400);
+    }
+};
+
+
 module.exports = {
     addAchat,
     getAchatsByEmploye,
+    getAllAchats
 };

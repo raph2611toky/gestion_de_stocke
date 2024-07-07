@@ -38,7 +38,7 @@ db.sequelize = sequelize;
 
 db.employe = require("./employe.js")(sequelize, DataTypes);
 db.stocke = require("./stocke")(sequelize,DataTypes);
-db.stocke_achat = require("./stocke_achat")(sequelize,DataTypes);
+db.StockeAchat = require("./stocke_achat")(sequelize,DataTypes);
 
 db.sequelize.sync({ force: false }).then(() => {
     console.log("yes re-sync done!");
