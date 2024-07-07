@@ -14,6 +14,8 @@ router.delete('/stockes/:id_stocke',authenticate, stockeController.deleteStocke)
 router.post('/achats', authenticate, achat_ontroller.addAchat);
 router.get('/achats/employe', authenticate, achat_ontroller.getAchatsByEmploye);
 router.get('/achats', authenticate, achat_ontroller.getAllAchats);
+router.get('/stats/stocke-par-mois', authenticate, achat_ontroller.getStockeStatsByMonth);
+router.get('/stats/prix-par-mois', authenticate, achat_ontroller.getPrixStatsByMonth);
 
 
 module.exports = router;

@@ -103,7 +103,7 @@ const getStockeStatsByMonth = async (req, res) => {
     try {
         const stats = await StockeAchat.findAll({
             attributes: [
-                [Sequelize.fn('MONTH', Sequelize.col('date_achat')), 'month'],
+                [Sequelize.fn('MONTH', Sequelize.col('date_achat')), 'mois'],
                 [Sequelize.fn('COUNT', '*'), 'nombre_stocke'],
             ],
             group: [Sequelize.fn('MONTH', Sequelize.col('date_achat'))],
