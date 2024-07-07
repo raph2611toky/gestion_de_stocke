@@ -26,7 +26,7 @@ module.exports = (sequelize, DataTypes) => {
 
     StockeAchat.associate = (models) => {
         StockeAchat.belongsTo(models.Employe, { foreignKey: 'cin_employe' });
-        StockeAchat.belongsTo(models.Stocke, { foreignKey: 'id_stocke' });
+        StockeAchat.belongsTo(models.Stocke, { foreignKey: 'id_stocke', as: 'stocke' });
     };
 
     return StockeAchat;

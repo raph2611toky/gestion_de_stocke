@@ -23,6 +23,18 @@ const verifyToken = (token) => {
     }
 };
 
+const getMonthByNumber = (month_number) => {
+    try {
+        if (month_number > 12 || 0 > month_number ){
+            return None
+        }
+        const numbers_month = ['Janvier','Février', 'Mars', 'Avril', 'May', 'Juin', 'Juillet', 'Août', 'Septembre', 'Octobre', 'Novembre', 'Décembre']
+        return numbers_month[month_number-1]
+    } catch (error) {
+        throw new Error('Nombre invalide de mois');
+    }
+}
+
 module.exports = {
     send_res(res, json_response, status = 200) {
         return res.status(status).send(json_response);
@@ -48,4 +60,5 @@ module.exports = {
     },
     generateToken,
     verifyToken,
+    getMonthByNumber,
 };

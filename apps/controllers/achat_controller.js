@@ -3,13 +3,14 @@ const db = require("../models");
 const Helper = require('../../config/helper');
 
 const Stocke = db.Stocke;
-const Employe = db.Employe;
+const Sequelize = db.Sequelize;
 const StockeAchat = db.StockeAchat;
 
 const addAchat = async (req, res) => {
     try {
         const { achats } = req.body;
-        const cin_employe = req.user.cin_employe;
+        console.log(req);
+        const cin_employe = req.user.cin;
 
         const achatPromises = achats.map(async (achat) => {
             const { id_stocke, quantite } = achat;
@@ -42,7 +43,7 @@ const addAchat = async (req, res) => {
 
 const getAchatsByEmploye = async (req, res) => {
     try {
-        const cin_employe = req.user.cin_employe;
+        const cin_employe = req.user.cin;
         const achats = await StockeAchat.findAll({
             where: { cin_employe },
             include: [
@@ -50,6 +51,7 @@ const getAchatsByEmploye = async (req, res) => {
             ],
             order: [['date_achat', 'DESC']]
         });
+        
 
         return Helper.send_res(res, achats);
     } catch (err) {
@@ -109,8 +111,12 @@ const getStockeStatsByMonth = async (req, res) => {
             group: [Sequelize.fn('MONTH', Sequelize.col('date_achat'))],
             order: [[Sequelize.fn('MONTH', Sequelize.col('date_achat')), 'ASC']],
         });
+        const statsFormatted = stats.map(stat => ({
+            mois: Helper.getMonthByNumber(stat.dataValues.mois),
+            nombre_stocke: stat.dataValues.nombre_stocke
+        }));
 
-        return Helper.send_res(res, stats);
+        return Helper.send_res(res, statsFormatted);
     } catch (err) {
         console.error(err);
         const message = `Impossible de récupérer les statistiques sur le nombre de stocke par mois ! Réessayez dans quelques instants.`;
@@ -122,21 +128,28 @@ const getPrixStatsByMonth = async (req, res) => {
     try {
         const stats = await StockeAchat.findAll({
             attributes: [
-                [Sequelize.fn('MONTH', Sequelize.col('date_achat')), 'month'],
-                [Sequelize.fn('SUM', Sequelize.col('quantite') * Sequelize.col('prix_en_ariary')), 'total_prix'],
+                [Sequelize.fn('MONTH', Sequelize.col('date_achat')), 'mois'],
+                [Sequelize.literal('SUM(quantite * `stocke`.`prix_en_ariary`)'), 'total_prix'],
             ],
             include: [{ model: Stocke, as: 'stocke', attributes: [] }],
             group: [Sequelize.fn('MONTH', Sequelize.col('date_achat'))],
             order: [[Sequelize.fn('MONTH', Sequelize.col('date_achat')), 'ASC']],
         });
 
-        return Helper.send_res(res, stats);
+        const statsFormatted = stats.map(stat => ({
+            mois: Helper.getMonthByNumber(stat.dataValues.mois),
+            total_prix: stat.dataValues.total_prix
+        }));
+
+        return Helper.send_res(res, statsFormatted);
     } catch (err) {
         console.error(err);
         const message = `Impossible de récupérer les statistiques sur les prix par mois ! Réessayez dans quelques instants.`;
         return Helper.send_res(res, { erreur: message }, 400);
     }
 };
+
+
 
 module.exports = {
     addAchat,

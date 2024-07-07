@@ -40,6 +40,12 @@ db.Employe = require("./employe.js")(sequelize, DataTypes);
 db.Stocke = require("./stocke")(sequelize,DataTypes);
 db.StockeAchat = require("./stocke_achat")(sequelize,DataTypes);
 
+Object.values(db).forEach(model => {
+  if (model.associate) {
+      model.associate(db);
+  }
+});
+
 db.sequelize.sync({ force: false }).then(() => {
     console.log("yes re-sync done!");
   });
