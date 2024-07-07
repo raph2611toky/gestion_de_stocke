@@ -27,8 +27,8 @@ const addStocke = async (req, res) => {
 // :::: 2 - get all Stocke :::: //
 const getAllStocke = async (req, res) => {
     try {
-        if (req.query.nom_stocke) {
-            const nom_stocke = req.query.nom_stocke;
+        if (req.params.nom_stocke) {
+            const nom_stocke = req.params.nom_stocke;
             const { count, rows } = await Stocke.findAndCountAll({
                 where: {
                     nom_stocke: {
@@ -107,6 +107,7 @@ const deleteStocke = async (req, res) => {
         return Helper.send_res(res, { erreur: message }, 500);
     }
 };
+
 
 
 module.exports = {

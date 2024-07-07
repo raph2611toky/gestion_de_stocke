@@ -12,6 +12,7 @@ const sequelize = new Sequelize(
   {
     host: db_config.HOST,
     dialect: db_config.dialect,
+    logging: false,
     pool: {
       max: db_config.pool.max,
       min: db_config.pool.min,
@@ -37,6 +38,7 @@ db.sequelize = sequelize;
 
 db.employe = require("./employe.js")(sequelize, DataTypes);
 db.stocke = require("./stocke")(sequelize,DataTypes);
+db.stocke_achat = require("./stocke_achat")(sequelize,DataTypes);
 
 db.sequelize.sync({ force: false }).then(() => {
     console.log("yes re-sync done!");

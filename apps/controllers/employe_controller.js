@@ -125,8 +125,10 @@ const deleteEmploye = async (req, res) => {
 
 
 const login = async (req, res) => {
+    //request.body.keys() = ['email','password']
     const { email, password } = req.body;
     try {
+        console.log(req.body)
         const employe = await Employe.findOne({ where: { email } });
         if (!employe) {
             return Helper.send_res(res, { message: "Utilisateur non trouvé" }, 404);
@@ -140,7 +142,8 @@ const login = async (req, res) => {
 
         const employeData = { ...employe.toJSON() };
         delete employeData.password;
-        return Helper.send_res(res, { message: "Connexion réussie", employe: employeData }, 200);
+        const token = Helper.generateToken(employeData);
+        return Helper.send_res(res, { token }, 200);
     } catch (error) {
         console.error('Erreur lors de la connexion :', error);
         return Helper.send_res(res, { message: "Erreur lors de la connexion" }, 500);

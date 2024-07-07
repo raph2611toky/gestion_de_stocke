@@ -12,5 +12,6 @@ module.exports = {
         min:0,
         acquire:3000,
         idle:2000
-    }
+    },
+    logging: false,
 }

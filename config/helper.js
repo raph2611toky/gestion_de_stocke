@@ -1,4 +1,27 @@
 const bcrypt = require('bcrypt');
+const jwt = require('jsonwebtoken');
+
+const SECRET_KEY = process.env.JWT_SECRET || 'your_secret_key';
+
+const generateToken = (employe) => {
+    const payload = {
+        cin: employe.cin,
+        nom: employe.nom,
+        prenom: employe.prenom,
+        adresse: employe.adresse,
+        telephone: employe.telephone,
+        email: employe.email,
+    };
+    return jwt.sign(payload, SECRET_KEY, { expiresIn: '1d' });
+};
+
+const verifyToken = (token) => {
+    try {
+        return jwt.verify(token, SECRET_KEY);
+    } catch (error) {
+        throw new Error('Invalid token');
+    }
+};
 
 module.exports = {
     send_res(res, json_response, status = 200) {
@@ -22,5 +45,7 @@ module.exports = {
             console.error('Erreur lors de la vérification du mot de passe :', err);
             throw err; // Ajout pour gérer les erreurs correctement
         }
-    }
+    },
+    generateToken,
+    verifyToken,
 };
