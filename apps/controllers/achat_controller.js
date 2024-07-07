@@ -129,7 +129,7 @@ const getPrixStatsByMonth = async (req, res) => {
         const stats = await StockeAchat.findAll({
             attributes: [
                 [Sequelize.fn('MONTH', Sequelize.col('date_achat')), 'mois'],
-                [Sequelize.literal('SUM(quantite * `stocke`.`prix_en_ariary`)'), 'total_prix'],
+                [Sequelize.literal('SUM(quantite * `stocke`.`prix_en_ariary`)'), 'total_prix']
             ],
             include: [{ model: Stocke, as: 'stocke', attributes: [] }],
             group: [Sequelize.fn('MONTH', Sequelize.col('date_achat'))],
