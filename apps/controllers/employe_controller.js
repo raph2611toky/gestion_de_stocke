@@ -3,7 +3,7 @@ const db = require("../models");
 const Helper = require('../../config/helper');
 
 // :::: Creat main models :::: //
-const Employe = db.employe;
+const Employe = db.Employe;
 
 // :::: 1 - create Employe :::: //
 const addEmploye = async (req, res) => {

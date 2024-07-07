@@ -36,8 +36,8 @@ const db = {};
 db.Sequelize = sequelize;
 db.sequelize = sequelize;
 
-db.employe = require("./employe.js")(sequelize, DataTypes);
-db.stocke = require("./stocke")(sequelize,DataTypes);
+db.Employe = require("./employe.js")(sequelize, DataTypes);
+db.Stocke = require("./stocke")(sequelize,DataTypes);
 db.StockeAchat = require("./stocke_achat")(sequelize,DataTypes);
 
 db.sequelize.sync({ force: false }).then(() => {

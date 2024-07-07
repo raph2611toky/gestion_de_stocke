@@ -99,9 +99,49 @@ const getAllAchats = async (req, res) => {
     }
 };
 
+const getStockeStatsByMonth = async (req, res) => {
+    try {
+        const stats = await StockeAchat.findAll({
+            attributes: [
+                [Sequelize.fn('MONTH', Sequelize.col('date_achat')), 'month'],
+                [Sequelize.fn('COUNT', '*'), 'nombre_stocke'],
+            ],
+            group: [Sequelize.fn('MONTH', Sequelize.col('date_achat'))],
+            order: [[Sequelize.fn('MONTH', Sequelize.col('date_achat')), 'ASC']],
+        });
+
+        return Helper.send_res(res, stats);
+    } catch (err) {
+        console.error(err);
+        const message = `Impossible de récupérer les statistiques sur le nombre de stocke par mois ! Réessayez dans quelques instants.`;
+        return Helper.send_res(res, { erreur: message }, 400);
+    }
+};
+
+const getPrixStatsByMonth = async (req, res) => {
+    try {
+        const stats = await StockeAchat.findAll({
+            attributes: [
+                [Sequelize.fn('MONTH', Sequelize.col('date_achat')), 'month'],
+                [Sequelize.fn('SUM', Sequelize.col('quantite') * Sequelize.col('prix_en_ariary')), 'total_prix'],
+            ],
+            include: [{ model: Stocke, as: 'stocke', attributes: [] }],
+            group: [Sequelize.fn('MONTH', Sequelize.col('date_achat'))],
+            order: [[Sequelize.fn('MONTH', Sequelize.col('date_achat')), 'ASC']],
+        });
+
+        return Helper.send_res(res, stats);
+    } catch (err) {
+        console.error(err);
+        const message = `Impossible de récupérer les statistiques sur les prix par mois ! Réessayez dans quelques instants.`;
+        return Helper.send_res(res, { erreur: message }, 400);
+    }
+};
 
 module.exports = {
     addAchat,
     getAchatsByEmploye,
-    getAllAchats
+    getAllAchats,
+    getStockeStatsByMonth,
+    getPrixStatsByMonth,
 };
