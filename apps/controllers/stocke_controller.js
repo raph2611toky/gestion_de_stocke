@@ -11,16 +11,19 @@ const addStocke = async (req, res) => {
     // req.body.keys = ['nom_stocke','poids_en_gramme','prix_en_ariary','nombre','description','marque', 'version']
     try {
         let {nom_stocke,poids_en_gramme,prix_en_ariary,marque,version,nombre,description}=req.body;
+        const cin_employe = req.user.cin;
+        console.log(req.user);
         const existingStocke = await Stocke.findOne({ where: { nom_stocke } });
         if (existingStocke) {
             return Helper.send_res(res, { message: `Le cin ${nom_stocke} est déjà utilisé.` }, 401);
         }
-        let info = {nom_stocke,poids_en_gramme,prix_en_ariary,marque,version,nombre,description};
+        let info = {nom_stocke,poids_en_gramme,prix_en_ariary,marque,version,nombre,description,cin_employe};
+        console.log(info)
         const stocke_created = await Stocke.create(info);
         return Helper.send_res(res, stocke_created, 201);
     } catch (err) {
         console.error(err);
-        const message = `Impossible de créer cet employé ! Réessayez dans quelques instants.`;
+        const message = `Impossible de créer cet stocke ! Réessayez dans quelques instants.`;
         return Helper.send_res(res, { erreur: message }, 400);
     }
 };

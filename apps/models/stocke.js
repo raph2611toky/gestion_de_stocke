@@ -33,8 +33,15 @@ module.exports = (sequelize, DataTypes) => {
         description: {
             type: DataTypes.STRING(200),
             allowNull: true,
+        },
+        cin_employe: {
+            type:DataTypes.STRING,
+            allowNull: false
         }
     });
+    Stocke.associate = (models) => {
+        Stocke.belongsTo(models.Employe, { foreignKey: 'cin_employe',as:'employe'});
+    };
 
     return Stocke;
 };
