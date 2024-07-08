@@ -1,20 +1,21 @@
 const { ValidationError, UniqueConstraintError, Op } = require("sequelize");
 const db = require("../models");
 const Helper = require('../../config/helper');
+const { version } = require("mariadb");
 
 // :::: Creat main models :::: //
 const Stocke = db.Stocke;
 
 // :::: 1 - create Stocke :::: //
 const addStocke = async (req, res) => {
-    // req.body.keys = ['nom_stocke','poids_en_gramme','prix_en_ariary','nombre','description']
+    // req.body.keys = ['nom_stocke','poids_en_gramme','prix_en_ariary','nombre','description','marque', 'version']
     try {
-        let {nom_stocke,poids_en_gramme,prix_en_ariary,nombre,description}=req.body;
+        let {nom_stocke,poids_en_gramme,prix_en_ariary,marque,version,nombre,description}=req.body;
         const existingStocke = await Stocke.findOne({ where: { nom_stocke } });
         if (existingStocke) {
             return Helper.send_res(res, { message: `Le cin ${nom_stocke} est déjà utilisé.` }, 401);
         }
-        let info = {nom_stocke,poids_en_gramme,prix_en_ariary,nombre,description};
+        let info = {nom_stocke,poids_en_gramme,prix_en_ariary,marque,version,nombre,description};
         const stocke_created = await Stocke.create(info);
         return Helper.send_res(res, stocke_created, 201);
     } catch (err) {

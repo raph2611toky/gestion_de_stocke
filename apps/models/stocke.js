@@ -17,6 +17,14 @@ module.exports = (sequelize, DataTypes) => {
             type: DataTypes.INTEGER,
             allowNull: false,
         },
+        marque: {
+            type: DataTypes.STRING,
+            allowNull: true
+        },
+        version:{
+            type: DataTypes.STRING,
+            allowNull:false
+        },
         nombre: {
             type: DataTypes.INTEGER,
             allowNull: false,
