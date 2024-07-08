@@ -5,29 +5,51 @@ const { version } = require("mariadb");
 
 // :::: Creat main models :::: //
 const Stocke = db.Stocke;
+const Employe = db.Employe;
 
 // :::: 1 - create Stocke :::: //
 const addStocke = async (req, res) => {
-    // req.body.keys = ['nom_stocke','poids_en_gramme','prix_en_ariary','nombre','description','marque', 'version']
+    console.log(req.body);
+    // req.body.keys = ['nom_stocke','prix_en_ariary','nombre','description','marque', 'version']
     try {
-        let {nom_stocke,poids_en_gramme,prix_en_ariary,marque,version,nombre,description}=req.body;
+        let { nom_stocke, prix_en_ariary, marque, version, nombre, description } = req.body;
         const cin_employe = req.user.cin;
-        let info = {nom_stocke,poids_en_gramme,prix_en_ariary,marque,version,nombre,description,cin_employe};
-        const stocke_created = await Stocke.create(info);
-        return Helper.send_res(res, stocke_created, 201);
+
+        let existingStocke = await Stocke.findOne({
+            where: {
+                nom_stocke,
+                marque,
+                version
+            }
+        });
+
+        if (existingStocke) {
+            existingStocke.nombre += nombre;
+            if (description && description !== '') {
+                existingStocke.description = description;
+            }
+            await existingStocke.save();
+            return Helper.send_res(res, existingStocke, 200);
+        } else {
+            let info = { nom_stocke, prix_en_ariary, marque, version, nombre, description, cin_employe };
+            const stocke_created = await Stocke.create(info);
+            return Helper.send_res(res, stocke_created, 201);
+        }
     } catch (err) {
         console.error(err);
-        const message = `Impossible de créer cet stocke ! Réessayez dans quelques instants.`;
+        const message = `Impossible de créer ce stocke ! Réessayez dans quelques instants.`;
         return Helper.send_res(res, { erreur: message }, 400);
     }
 };
 
+
 // :::: 2 - get all Stocke :::: //
 const getAllStocke = async (req, res) => {
+    //GET /api/achats?dateDebut=2024-01-01&dateFin=2024-06-30
     try {
         if (req.params.nom_stocke) {
             const nom_stocke = req.params.nom_stocke;
-            const { count, rows } = await Stocke.findAndCountAll({
+            const stockes = await Stocke.findAll({
                 where: {
                     nom_stocke: {
                         [Op.like]: `%${nom_stocke}%`,
@@ -36,13 +58,45 @@ const getAllStocke = async (req, res) => {
                 order: ["nom_stocke"],
                 limit: 50,
             });
-            const message = `Il y a ${count} Stockes qui correspondent au terme de recherche ${nom_stocke}.`;
-            console.log(message);
-            return Helper.send_res(res, rows);
+            const formattedStockes = stockes.map(stocke => {
+            return {
+                id_stocke: stocke.id_stocke,
+                nom_stocke: stocke.nom_stocke,
+                poids_en_gramme: stocke.poids_en_gramme,
+                prix_en_ariary: stocke.prix_en_ariary,
+                marque: stocke.marque,
+                version: stocke.version,
+                nombre: stocke.nombre,
+                description: stocke.description,
+                employe_nom: stocke.employe.nom
+            };
+        });
+        return Helper.send_res(res, formattedStockes);
         } else {
-            const stockes = await Stocke.findAll({ order: ["nom_stocke"] });
-            return Helper.send_res(res, stockes);
+            const stockes = await Stocke.findAll({
+                include: [{
+                    model: Employe,
+                    as: 'employe',
+                    attributes: ['nom'] 
+                }],
+                order: [["nom_stocke", "ASC"]]
+            });
+            const formattedStockes = stockes.map(stocke => {
+            return {
+                id_stocke: stocke.id_stocke,
+                nom_stocke: stocke.nom_stocke,
+                poids_en_gramme: stocke.poids_en_gramme,
+                prix_en_ariary: stocke.prix_en_ariary,
+                marque: stocke.marque,
+                version: stocke.version,
+                nombre: stocke.nombre,
+                description: stocke.description,
+                employe_nom: stocke.employe.nom
+            };
+        });
+        return Helper.send_res(res, formattedStockes);
         }
+
     } catch (err) {
         console.error(err);
         const message = `Impossible de récupérer la liste des Stockes ! Réessayez dans quelques instants.`;

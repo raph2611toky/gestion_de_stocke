@@ -9,10 +9,6 @@ module.exports = (sequelize, DataTypes) => {
             type: DataTypes.STRING(50),
             allowNull: false,
         },
-        poids_en_gramme: {
-            type: DataTypes.FLOAT,
-            allowNull: false,
-        },
         prix_en_ariary: {
             type: DataTypes.INTEGER,
             allowNull: false,

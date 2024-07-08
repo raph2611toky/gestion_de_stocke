@@ -10,6 +10,7 @@ const addEmploye = async (req, res) => {
     // req.body.keys = ['cin','nom','email','password','confirm_password']
     try {
         let cin = req.body.cin;
+        console.log(req.body)
         if (cin < 100000000000 || 999999999999 < cin){
             return Helper.send_res(res, {erreur: 'Le cin est invalide'}, 400)
         }

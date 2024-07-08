@@ -4,8 +4,12 @@ const Helper = require('../../config/helper');
 const { version } = require("mariadb");
 
 const Stocke = db.Stocke;
+const Employe = db.Employe;
 const Sequelize = db.Sequelize;
 const StockeAchat = db.StockeAchat;
+
+const currentMonth = new Date().getMonth() + 1;
+const allMonths = Array.from({ length: currentMonth }, (_, i) => i + 1);
 
 const addAchat = async (req, res) => {
     try {
@@ -39,7 +43,6 @@ const addAchat = async (req, res) => {
     }
 };
 
-
 const getAchatsByEmploye = async (req, res) => {
     try {
         const cin_employe = req.user.cin;
@@ -62,7 +65,6 @@ const getAchatsByEmploye = async (req, res) => {
 
 const getAllAchats = async (req, res) => {
     try {
-        //GET /api/achats?dateDebut=2024-01-01&dateFin=2024-06-30
         const { dateDebut, dateFin } = req.query;
 
         let whereClause = {};
@@ -88,18 +90,27 @@ const getAllAchats = async (req, res) => {
 
         const achats = await StockeAchat.findAll({
             where: whereClause,
-            include: [{ model: Stocke, as: 'stocke' }],
+            include: [
+                { model: Employe, as: 'employe', attributes: ['nom', 'cin'] }, 
+                { model: Stocke, as: 'stocke' } 
+            ],
             order: [['date_achat', 'DESC']],
         });
 
-        return Helper.send_res(res, achats);
+        const nomsEmployes = achats.map(achat => ({
+            id_achat: achat.id_achat,
+            quantite: achat.quantite,
+            date_achat: achat.date_achat,
+            nom_employe: achat.employe ? achat.employe.nom : null, 
+            stocke: achat.stocke 
+        }));
+
+        return res.json({ achats: nomsEmployes });
     } catch (err) {
-        console.error(err);
-        const message = `Impossible de récupérer la liste des achats de stocke ! Réessayez dans quelques instants.`;
-        return Helper.send_res(res, { erreur: message }, 400);
+        console.error('Erreur lors de la récupération des achats :', err);
+        return res.status(500).json({ message: 'Erreur serveur lors de la récupération des achats.' });
     }
 };
-
 const dashboard = async (req, res) => {
     try {
 
@@ -111,9 +122,18 @@ const dashboard = async (req, res) => {
             group: [Sequelize.fn('MONTH', Sequelize.col('date_achat'))],
             order: [[Sequelize.fn('MONTH', Sequelize.col('date_achat')), 'ASC']],
         });
-        stats_nombre_stocke = stats_nombre_stocke.map(stat => ({
-            mois: Helper.getMonthByNumber(stat.dataValues.mois),
-            nombre_stocke: stat.dataValues.nombre_stocke
+    
+        let statsMap = new Map(stats_nombre_stocke.map(stat => [stat.dataValues.mois, stat.dataValues.nombre_stocke]));
+    
+        allMonths.forEach(month => {
+            if (!statsMap.has(month)) {
+                statsMap.set(month, 0);
+            }
+        });
+    
+        stats_nombre_stocke = Array.from(statsMap, ([mois, nombre_stocke]) => ({
+            mois: Helper.getMonthByNumber(mois),
+            nombre_stocke: nombre_stocke
         }));
 
         let stats_prix_par_mois = await StockeAchat.findAll({
@@ -126,9 +146,17 @@ const dashboard = async (req, res) => {
             order: [[Sequelize.fn('MONTH', Sequelize.col('date_achat')), 'ASC']],
         });
 
-        stats_prix_par_mois = stats_prix_par_mois.map(stat => ({
-            mois: Helper.getMonthByNumber(stat.dataValues.mois),
-            total_prix: stat.dataValues.total_prix
+        let statsMap_prix = new Map(stats_prix_par_mois.map(stat => [stat.dataValues.mois, stat.dataValues.total_prix]));
+
+        allMonths.forEach(month => {
+            if (!statsMap_prix.has(month)) {
+                statsMap_prix.set(month, 0);
+            }
+        });
+
+        stats_prix_par_mois = Array.from(statsMap_prix, ([mois, total_prix]) => ({
+            mois: Helper.getMonthByNumber(mois),
+            total_prix: total_prix
         }));
 
         const stockRestantTotal = await Stocke.sum('nombre');
@@ -150,22 +178,39 @@ const dashboard = async (req, res) => {
             version: stockeVendus.dataValues.stocke.version
         }));
 
-        const soldeTotalRecu = await StockeAchat.sum(Sequelize.literal('quantite * `stocke`.`prix_en_ariary`'));
-//
-        //const topProduitVendu = await StockeAchat.findOne({
-        //    attributes: ['id_stocke', [Sequelize.fn('sum', Sequelize.col('quantite')), 'total']],
-        //    include: [{ model: Stocke, as: 'stocke', attributes: ['nom_stocke'] }],
-        //    group: ['id_stocke'],
-        //    order: [[Sequelize.literal('total'), 'DESC']],
-        //});
-//
-        //const topTroisProduits = await StockeAchat.findAll({
-        //    attributes: ['id_stocke', [sequelize.fn('sum', sequelize.col('quantite')), 'total']],
-        //    include: [{ model: Stocke, as: 'stocke', attributes: ['nom_stocke'] }],
-        //    group: ['id_stocke'],
-        //    order: [[sequelize.literal('total'), 'DESC']],
-        //    limit: 3
-        //});
+        const soldeTotalRecu_list = await StockeAchat.findAll({
+                attributes: [[Sequelize.literal('SUM(quantite * `stocke`.`prix_en_ariary`)'), 'total_prix']],
+                include: [{model: Stocke, as: 'stocke', attributes: [],},],
+            });
+        let soldeTotalRecu = 0
+        for(let i=0;i < soldeTotalRecu_list.length;i++){
+            soldeTotalRecu += parseInt(soldeTotalRecu_list[i].dataValues.total_prix)
+        }
+
+        let topProduitVendu = await StockeAchat.findOne({
+            attributes: ['id_stocke', [Sequelize.fn('sum', Sequelize.col('quantite')), 'total']],
+            include: [{ model: Stocke, as: 'stocke', attributes: ['nom_stocke'] }],
+            group: ['id_stocke'],
+            order: [[Sequelize.literal('total'), 'DESC']],});
+        topProduitVendu = {
+            nom_stocke: topProduitVendu ? topProduitVendu.dataValues.stocke.nom_stocke:null,
+            total_vendus: topProduitVendu ? topProduitVendu.dataValues.total:null
+        }
+        const topTroisProduits_list = await StockeAchat.findAll({
+            attributes: [
+                [Sequelize.literal('`stocke`.`nom_stocke`'), 'nom_stocke'],
+                [Sequelize.fn('sum', Sequelize.col('quantite')), 'total']
+            ],
+            include: [{ model: Stocke, as: 'stocke', attributes: [] }],
+            group: ['stocke.nom_stocke'],
+            order: [[Sequelize.literal('total'), 'DESC']],
+            limit: 3
+        });
+
+        let topTroisProduits = topTroisProduits_list.map(topTroisProduit => ({
+            nom_stocke: topTroisProduit.dataValues.nom_stocke,
+            total: topTroisProduit.dataValues.total
+        }));
 
         const dashboard_info = {
             'stocke_par_mois': stats_nombre_stocke,
@@ -175,8 +220,8 @@ const dashboard = async (req, res) => {
             'stocks_vendus_total': stocksVendusTotal,
             'stocks_vendus_par_type': stocksVendusParType,
             'solde_total_recu': soldeTotalRecu,
-            //'top_produit_vendu': topProduitVendu,
-            //'top_trois_produits': topTroisProduits
+            'top_produit_vendu': topProduitVendu,
+            'top_trois_produits': topTroisProduits
         };//
 
         return Helper.send_res(res,dashboard_info,200)
