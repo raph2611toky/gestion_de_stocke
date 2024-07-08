@@ -7,9 +7,12 @@ const Employe = db.Employe;
 
 // :::: 1 - create Employe :::: //
 const addEmploye = async (req, res) => {
-    // req.body.keys = ['cin','nom','prenom','email','password','confirm_password','telephone','adresse']
+    // req.body.keys = ['cin','nom','email','password','confirm_password']
     try {
         let cin = req.body.cin;
+        if (cin < 100000000000 || 999999999999 < cin){
+            return Helper.send_res(res, {erreur: 'Le cin est invalide'}, 400)
+        }
         const existingEmploye = await Employe.findOne({ where: { cin } });
         if (existingEmploye) {
             return Helper.send_res(res, { message: `Le cin ${cin} est déjà utilisé.` }, 401);
@@ -23,9 +26,6 @@ const addEmploye = async (req, res) => {
         let info = {
             cin:cin,
             nom: req.body.nom,
-            prenom: req.body.prenom,
-            adresse: req.body.adresse,
-            telephone: req.body.telephone,
             email: req.body.email,
             password: hashedPassword,
         };

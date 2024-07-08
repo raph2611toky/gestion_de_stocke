@@ -9,24 +9,12 @@ module.exports = (sequelize, DataTypes) => {
             type: DataTypes.STRING(50),
             allowNull: false,
         },
-        prenom: {
-            type: DataTypes.STRING(50),
-            allowNull: false,
-        },
-        adresse: {
-            type: DataTypes.STRING(50),
-            allowNull: false,
-        },
-        telephone: {
-            type: DataTypes.STRING(50),
-            allowNull: false,
-        },
         email: {
             type: DataTypes.STRING(50),
             allowNull: false,
         },
         password: {
-            type: DataTypes.STRING, // Correction du type de données
+            type: DataTypes.STRING,
             allowNull: false,
         },
     });
