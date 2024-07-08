@@ -9,7 +9,7 @@ const StockeAchat = db.StockeAchat;
 
 const addAchat = async (req, res) => {
     try {
-        const { achats } = req.body;
+        const achats = req.body;
         const cin_employe = req.user.cin;
         const achatPromises = achats.map(async (achat) => {
             const { id_stocke, quantite } = achat;
