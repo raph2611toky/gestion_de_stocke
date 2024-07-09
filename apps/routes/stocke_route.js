@@ -8,6 +8,7 @@ const authenticate = require('../../config/middleware/authenticate')
 router.post('/stockes',authenticate, stockeController.addStocke);
 router.get('/stockes',authenticate, stockeController.getAllStocke);
 router.get('/stockes/search/:nom_stocke',authenticate, stockeController.getAllStocke);
+router.get('/stockes/search/',authenticate, stockeController.getAllStocke);
 router.get('/stocke/:id_stocke',authenticate, stockeController.getOneStocke);
 router.put('/stocke/:id_stocke',authenticate, stockeController.updateStocke);
 router.delete('/stocke/:id_stocke',authenticate, stockeController.deleteStocke);
@@ -16,7 +17,8 @@ router.get('/achats/employe', authenticate, achat_controller.getAchatsByEmploye)
 router.get('/achats', authenticate, achat_controller.getAllAchats);
 router.get('/stats/stocke-par-mois', authenticate, achat_controller.getStockeStatsByMonth);
 router.get('/stats/prix-par-mois', authenticate, achat_controller.getPrixStatsByMonth);
-router.get('/dashboard',authenticate, achat_controller.dashboard)
+router.get('/dashboard',authenticate, achat_controller.dashboard);
+router.get('/payment_stocke',authenticate, achat_controller.paymentStocke);
 
 
 module.exports = router;

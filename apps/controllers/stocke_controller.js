@@ -49,16 +49,22 @@ const getAllStocke = async (req, res) => {
     try {
         if (req.params.nom_stocke) {
             const nom_stocke = req.params.nom_stocke;
+            console.log(nom_stocke);
             const stockes = await Stocke.findAll({
                 where: {
-                    nom_stocke: {
-                        [Op.like]: `%${nom_stocke}%`,
-                    },
+                    [Op.or]: [{nom_stocke: {[Op.like]: `%${nom_stocke}%`,}},
+                        {marque: {[Op.like]: `%${nom_stocke}%`,}}]
                 },
-                order: ["nom_stocke"],
+                include: {
+                    model: Employe,
+                    as: 'employe',
+                    attributes: ['nom', 'cin']
+                },
+                order: [['nom_stocke', 'ASC']],
                 limit: 50,
             });
             const formattedStockes = stockes.map(stocke => {
+            stocke = stocke.dataValues
             return {
                 id_stocke: stocke.id_stocke,
                 nom_stocke: stocke.nom_stocke,
@@ -68,7 +74,7 @@ const getAllStocke = async (req, res) => {
                 version: stocke.version,
                 nombre: stocke.nombre,
                 description: stocke.description,
-                employe_nom: stocke.employe.nom
+                employe_nom: stocke.employe.dataValues.nom
             };
         });
         return Helper.send_res(res, formattedStockes);

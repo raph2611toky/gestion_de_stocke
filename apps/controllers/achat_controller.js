@@ -1,4 +1,4 @@
-const { ValidationError, UniqueConstraintError, Op } = require("sequelize");
+const { ValidationError, literal,Op, fn, col } = require("sequelize");
 const db = require("../models");
 const Helper = require('../../config/helper');
 const { version } = require("mariadb");
@@ -8,29 +8,43 @@ const Employe = db.Employe;
 const Sequelize = db.Sequelize;
 const StockeAchat = db.StockeAchat;
 
-const currentMonth = new Date().getMonth() + 1;
+const now = new Date();
+const currentMonth = now.getMonth() + 1;
+const currentYear = now.getFullYear();
 const allMonths = Array.from({ length: currentMonth }, (_, i) => i + 1);
 
 const addAchat = async (req, res) => {
     try {
-        const achats = req.body;
+        // request.body.keys() = [{'stock','marque','version','quantity'}]
+        const achats = req.body.cartItems;
+        console.log(req.body)
         const cin_employe = req.user.cin;
-        const achatPromises = achats.map(async (achat) => {
-            const { id_stocke, quantite } = achat;
 
-            const stocke = await Stocke.findByPk(id_stocke);
+        const achatPromises = achats.map(async (achat) => {
+            let nom_stocke = achat.stock
+            let marque = achat.marque
+            let version = achat.version
+            let quantite = achat.quantity 
+            const stocke = await Stocke.findOne({
+                where: {
+                    nom_stocke,
+                    marque,
+                    version
+                }
+            });
+
             if (!stocke) {
-                throw new Error(`Le stocke avec l'ID ${id_stocke} n'existe pas.`);
+                throw new Error(`Le stocke avec le nom "${nom_stocke}", la marque "${marque}" et la version "${version}" n'existe pas.`);
             }
 
             if (stocke.nombre < quantite) {
-                throw new Error(`La quantité demandée pour le stocke avec l'ID ${id_stocke} dépasse la quantité disponible.`);
+                throw new Error(`La quantité demandée pour le stocke "${nom_stocke}" (marque: "${marque}", version: "${version}") dépasse la quantité disponible.`);
             }
 
             stocke.nombre -= quantite;
             await stocke.save();
 
-            return StockeAchat.create({ cin_employe, id_stocke, quantite });
+            return StockeAchat.create({ cin_employe, id_stocke: stocke.id_stocke, quantite });
         });
 
         const achatsResult = await Promise.all(achatPromises);
@@ -42,6 +56,7 @@ const addAchat = async (req, res) => {
         return Helper.send_res(res, { erreur: err.message || message }, 400);
     }
 };
+
 
 const getAchatsByEmploye = async (req, res) => {
     try {
@@ -96,21 +111,22 @@ const getAllAchats = async (req, res) => {
             ],
             order: [['date_achat', 'DESC']],
         });
-
+        const date = new Date(achat.date_achat);
+        const formattedDate = date.toISOString().split('T')[0];
         const nomsEmployes = achats.map(achat => ({
             id_achat: achat.id_achat,
             quantite: achat.quantite,
-            date_achat: achat.date_achat,
+            date_achat: formattedDate,
             nom_employe: achat.employe ? achat.employe.nom : null, 
             stocke: achat.stocke.dataValues
         }));
-        console.log(nomsEmployes);
         return res.json(nomsEmployes);
     } catch (err) {
         console.error('Erreur lors de la récupération des achats :', err);
         return res.status(500).json({ message: 'Erreur serveur lors de la récupération des achats.' });
     }
 };
+
 const dashboard = async (req, res) => {
     try {
         let stats_nombre_stocke = await StockeAchat.findAll({
@@ -138,6 +154,11 @@ const dashboard = async (req, res) => {
             mois: Helper.getMonthByNumber(stat.mois),
             nombre_stocke: stat.nombre_stocke
         }));
+        console.log(currentMonth,currentYear)
+        const stocksVendusTotal = await StockeAchat.sum('quantite', {
+            where: literal(`MONTH(date_achat) = ${currentMonth} AND YEAR(date_achat) = ${currentYear}`)
+        });
+        
 
         let stats_prix_par_mois = await StockeAchat.findAll({
             attributes: [
@@ -172,11 +193,22 @@ const dashboard = async (req, res) => {
             group: ['nom_stocke']
         });
 
-        const stocksVendusTotal = await StockeAchat.sum('quantite');
         let stocksVendusParType = await StockeAchat.findAll({
-            attributes: ['id_stocke', [Sequelize.fn('sum', Sequelize.col('quantite')), 'total']],
-            include: [{ model: Stocke, as: 'stocke', attributes: ['nom_stocke','marque', 'version'] }],
-            group: ['id_stocke']
+            attributes: ['id_stocke', [fn('sum', col('quantite')), 'total']],
+            include: [
+                {
+                    model: Stocke,
+                    as: 'stocke',
+                    attributes: ['nom_stocke', 'marque', 'version']
+                }
+            ],
+            where: {
+                [Op.and]: [
+                    fn('MONTH', col('date_achat')), currentMonth,
+                    fn('YEAR', col('date_achat')), currentYear
+                ]
+            },
+            group: ['id_stocke', 'stocke.nom_stocke', 'stocke.marque', 'stocke.version']
         });
         stocksVendusParType = stocksVendusParType.map(stockeVendus => ({
             nom_stocke: stockeVendus.dataValues.stocke.nom_stocke,
@@ -288,7 +320,56 @@ const getPrixStatsByMonth = async (req, res) => {
     }
 };
 
+const paymentStocke = async (req, res) => {
+    try{
+        const stocks = await Stocke.findAll({
+            attributes: ['nom_stocke', 'marque', 'version'],
+            order: [['nom_stocke', 'ASC'], ['marque', 'ASC'], ['version', 'ASC']]
+        });
 
+        // Initialiser les structures de données pour stocker les résultats
+        const nomsStocke = new Set();
+        const marquesParStocke = {};
+        const versionsParStockeMarque = {};
+
+        // Parcourir les résultats pour les structurer
+        stocks.forEach(stock => {
+            const { nom_stocke, marque, version } = stock;
+
+            nomsStocke.add(nom_stocke);
+
+            if (!marquesParStocke[nom_stocke]) {
+                marquesParStocke[nom_stocke] = new Set();
+            }
+            marquesParStocke[nom_stocke].add(marque);
+
+            const key = `${nom_stocke}__${marque}`;
+            if (!versionsParStockeMarque[key]) {
+                versionsParStockeMarque[key] = new Set();
+            }
+            versionsParStockeMarque[key].add(version);
+        });
+
+        const result = {
+            noms_stocke: Array.from(nomsStocke),
+            marques_par_stocke: {},
+            versions_par_stocke_marque: {}
+        };
+        Object.keys(marquesParStocke).forEach(nomStocke => {
+            result.marques_par_stocke[nomStocke] = Array.from(marquesParStocke[nomStocke]);
+        });
+
+        Object.keys(versionsParStockeMarque).forEach(key => {
+            result.versions_par_stocke_marque[key] = Array.from(versionsParStockeMarque[key]);
+        });
+
+        return Helper.send_res(res, result, 200);
+    }catch{
+        console.error(err);
+        const message = `Impossible de récupérer les donées lors de payement! Réessayez dans quelques instants.`;
+        return Helper.send_res(res, { erreur: message }, 400);
+    }
+}
 
 module.exports = {
     addAchat,
@@ -297,4 +378,5 @@ module.exports = {
     getStockeStatsByMonth,
     getPrixStatsByMonth,
     dashboard,
+    paymentStocke,
 };
