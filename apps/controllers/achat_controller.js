@@ -111,15 +111,19 @@ const getAllAchats = async (req, res) => {
             ],
             order: [['date_achat', 'DESC']],
         });
-        const date = new Date(achat.date_achat);
-        const formattedDate = date.toISOString().split('T')[0];
-        const nomsEmployes = achats.map(achat => ({
-            id_achat: achat.id_achat,
-            quantite: achat.quantite,
-            date_achat: formattedDate,
-            nom_employe: achat.employe ? achat.employe.nom : null, 
-            stocke: achat.stocke.dataValues
-        }));
+        const nomsEmployes = achats.map(achat => {
+            const date = new Date(achat.date_achat);
+            const formattedDate = date.toISOString().split('T')[0];
+        
+            return {
+                id_achat: achat.id_achat,
+                quantite: achat.quantite,
+                date_achat: formattedDate,
+                nom_employe: achat.employe ? achat.employe.nom : null,
+                stocke: achat.stocke.dataValues
+            };
+        });
+        
         return res.json(nomsEmployes);
     } catch (err) {
         console.error('Erreur lors de la récupération des achats :', err);
