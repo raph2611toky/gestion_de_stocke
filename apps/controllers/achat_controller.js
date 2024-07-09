@@ -102,10 +102,10 @@ const getAllAchats = async (req, res) => {
             quantite: achat.quantite,
             date_achat: achat.date_achat,
             nom_employe: achat.employe ? achat.employe.nom : null, 
-            stocke: achat.stocke 
+            stocke: achat.stocke.dataValues
         }));
-
-        return res.json({ achats: nomsEmployes });
+        console.log(nomsEmployes);
+        return res.json(nomsEmployes);
     } catch (err) {
         console.error('Erreur lors de la récupération des achats :', err);
         return res.status(500).json({ message: 'Erreur serveur lors de la récupération des achats.' });
@@ -113,7 +113,6 @@ const getAllAchats = async (req, res) => {
 };
 const dashboard = async (req, res) => {
     try {
-
         let stats_nombre_stocke = await StockeAchat.findAll({
             attributes: [
                 [Sequelize.fn('MONTH', Sequelize.col('date_achat')), 'mois'],
@@ -125,38 +124,21 @@ const dashboard = async (req, res) => {
     
         let statsMap = new Map(stats_nombre_stocke.map(stat => [stat.dataValues.mois, stat.dataValues.nombre_stocke]));
     
+        // Ajouter les mois manquants avec des valeurs de zéro
         allMonths.forEach(month => {
             if (!statsMap.has(month)) {
                 statsMap.set(month, 0);
             }
         });
     
+        // Convertir la map en tableau, trier par mois et remplacer les numéros de mois par leurs noms
         stats_nombre_stocke = Array.from(statsMap, ([mois, nombre_stocke]) => ({
-            mois: Helper.getMonthByNumber(mois),
-            nombre_stocke: nombre_stocke
-        }));
-
-        let stats_prix_par_mois = await StockeAchat.findAll({
-            attributes: [
-                [Sequelize.fn('MONTH', Sequelize.col('date_achat')), 'mois'],
-                [Sequelize.literal('SUM(quantite * `stocke`.`prix_en_ariary`)'), 'total_prix']
-            ],
-            include: [{ model: Stocke, as: 'stocke', attributes: [] }],
-            group: [Sequelize.fn('MONTH', Sequelize.col('date_achat'))],
-            order: [[Sequelize.fn('MONTH', Sequelize.col('date_achat')), 'ASC']],
-        });
-
-        let statsMap_prix = new Map(stats_prix_par_mois.map(stat => [stat.dataValues.mois, stat.dataValues.total_prix]));
-
-        allMonths.forEach(month => {
-            if (!statsMap_prix.has(month)) {
-                statsMap_prix.set(month, 0);
-            }
-        });
-
-        stats_prix_par_mois = Array.from(statsMap_prix, ([mois, total_prix]) => ({
-            mois: Helper.getMonthByNumber(mois),
-            total_prix: total_prix
+            mois,
+            nombre_stocke
+        })).sort((a, b) => a.mois - b.mois)
+          .map(stat => ({
+            mois: Helper.getMonthByNumber(stat.mois),
+            nombre_stocke: stat.nombre_stocke
         }));
 
         const stockRestantTotal = await Stocke.sum('nombre');
